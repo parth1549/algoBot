@@ -466,6 +466,11 @@ def root():
         "example": "/analyze?symbol=ITC.NS"
     }
 
+@app.get("/health")
+def health_check():
+    """Health check endpoint for UptimeRobot to keep the Render free tier awake"""
+    return {"status": "ok", "message": "Server is awake"}
+
 @app.get("/test-ui")
 async def test_ui():
     """Serve the test UI"""

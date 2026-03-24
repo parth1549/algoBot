@@ -27,7 +27,7 @@ export default function LogsPage() {
       if (res.status === 'success') setLogs(res.logs);
       else setError(res.status === 'no_logs' ? 'No logs yet. Start the backend and run an analysis.' : 'Failed to fetch logs.');
     } catch {
-      setError('Cannot reach backend at localhost:8000. Is the Python server running?');
+      setError(`Cannot reach backend. Is the Python server running?`);
     } finally {
       if (!silent) setLoading(false);
     }

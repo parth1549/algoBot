@@ -126,7 +126,9 @@ export default function Sidebar() {
         color: 'var(--text-muted)',
         lineHeight: 1.6,
       }}>
-        <div style={{ fontWeight: 600, marginBottom: 2 }}>Backend: localhost:8000</div>
+        <div style={{ fontWeight: 600, marginBottom: 2 }}>
+          Backend: {process.env.NEXT_PUBLIC_API_URL?.replace(/^https?:\/\//, '') || 'localhost:8000'}
+        </div>
         <div>RandomForest + UT Bot</div>
         <div>SMA · RSI · HMA · ATR</div>
       </div>

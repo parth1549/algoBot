@@ -22,7 +22,8 @@ export default function Topbar() {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch('http://localhost:8000/', { signal: AbortSignal.timeout(3000) });
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${baseUrl}/`, { signal: AbortSignal.timeout(3000) });
         setBackendOnline(res.ok);
       } catch {
         setBackendOnline(false);
