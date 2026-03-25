@@ -31,16 +31,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside style={{
-      width: 220,
-      minHeight: '100vh',
-      background: 'var(--bg-secondary)',
-      borderRight: '1px solid var(--border)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '0 12px 20px',
-      flexShrink: 0,
-    }}>
+    <aside className="hidden md:flex flex-col w-[220px] min-h-screen bg-[var(--bg-secondary)] border-r border-[var(--border)] shrink-0 px-3 pb-5">
       {/* Brand */}
       <div style={{
         padding: '20px 8px 24px',

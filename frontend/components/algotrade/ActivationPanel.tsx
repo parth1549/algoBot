@@ -76,7 +76,7 @@ export default function ActivationPanel() {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 mt-4 sm:mt-0">
           {days.map(d => (
             <button 
               key={d}

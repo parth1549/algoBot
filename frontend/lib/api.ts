@@ -72,6 +72,39 @@ export interface SymbolsResponse {
   total: number;
 }
 
+export interface AIAnalyzePayload {
+  symbol: string;
+  trade_amount: number;
+  total_return: string;
+  final_equity: number;
+  sharpe: string;
+  max_drawdown: string;
+  buy_signals: number;
+  sell_signals: number;
+}
+
+export interface AIAnalyzeResponse {
+  status: string;
+  data?: {
+    signal: 'BUY' | 'SELL' | 'HOLD';
+    suggestion: string;
+    confidence: number;
+  };
+  message?: string;
+}
+
+export interface ExecuteTradePayload {
+  symbol: string;
+  signal: string;
+  trade_amount: number;
+}
+
+export interface ExecuteTradeResponse {
+  status: string;
+  message: string;
+  trade_details?: unknown;
+}
+
 async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
@@ -128,6 +161,10 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(payload)
   }),
+  analyzeWithAI: (payload: AIAnalyzePayload) =>
+    apiFetch<AIAnalyzeResponse>('/ai-analyze', { method: 'POST', body: JSON.stringify(payload) }),
+  executeTrade: (payload: ExecuteTradePayload) =>
+    apiFetch<ExecuteTradeResponse>('/execute-trade', { method: 'POST', body: JSON.stringify(payload) }),
 
   // Yahoo Finance Market Data
   getMarketData: (symbol: string, interval = '5m', range = '5d') =>

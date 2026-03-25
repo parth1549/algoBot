@@ -17,6 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import uvicorn
 from dotenv import load_dotenv
+from pydantic import BaseModel
+import google.generativeai as genai
 
 # Setup Logging before anything else
 logger = logging.getLogger(__name__)
@@ -756,6 +758,84 @@ def get_logs(limit: int = 50):
         "status": "no_logs",
         "message": "File-based logs have been disabled. Check the terminal for live logs.",
         "logs": []
+    }
+
+# ------------------------------------------------------------------
+# AI Trading Agent Endpoints
+# ------------------------------------------------------------------
+class AIAnalyzeRequest(BaseModel):
+    symbol: str
+    trade_amount: float
+    total_return: str
+    final_equity: float
+    sharpe: str
+    max_drawdown: str
+    buy_signals: int
+    sell_signals: int
+
+class ExecuteTradeRequest(BaseModel):
+    symbol: str
+    signal: str
+    trade_amount: float
+
+# Configure Gemini
+api_key = os.getenv('GEMINI_API_KEY')
+if api_key:
+    genai.configure(api_key=api_key)
+
+@app.post("/ai-analyze")
+def ai_analyze(payload: AIAnalyzeRequest):
+    if not api_key:
+        return {"status": "error", "message": "Gemini API key not configured in .env"}
+    
+    prompt = f"""
+    You are an expert quantitative trading AI assistant.
+    Analyze the following backtest results for the asset {payload.symbol}:
+    - Total Return: {payload.total_return}%
+    - Final Simulated Equity: ₹{payload.final_equity}
+    - Sharpe Ratio: {payload.sharpe}
+    - Max Drawdown: {payload.max_drawdown}%
+    - BUY Signals fired: {payload.buy_signals}
+    - SELL Signals fired: {payload.sell_signals}
+    
+    The user is considering starting a live simulated paper trade system with a fixed capital amount of ₹{payload.trade_amount}.
+    
+    Based on these metrics, provide a final trading signal recommendation (must be strictly one of: BUY, SELL, or HOLD), 
+    an estimated confidence score (0-100), and a concise strategic suggestion explaining your reasoning in 2-3 sentences.
+    
+    Reply ONLY in valid JSON format exactly like this:
+    {{"signal": "BUY", "confidence": 85, "suggestion": "The Sharpe ratio is excellent indicating strong risk-adjusted returns..."}}
+    """
+    
+    try:
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        if text.startswith('```json'):
+            text = text[7:-3].strip()
+        elif text.startswith('```'):
+            text = text[3:-3].strip()
+            
+        import json
+        result = json.loads(text)
+        return {"status": "success", "data": result}
+    except Exception as e:
+        logger.error(f"Gemini API error: {e}")
+        return {"status": "error", "message": f"AI Engine error: {str(e)}"}
+
+@app.post("/execute-trade")
+def execute_trade(payload: ExecuteTradeRequest):
+    # Mock trade execution
+    logger.info(f"AI Trade Executed: {payload.signal} {payload.symbol} for ₹{payload.trade_amount}")
+    return {
+        "status": "success",
+        "message": f"Successfully executed [{payload.signal}] order for {payload.symbol} sizing ₹{payload.trade_amount}",
+        "trade_details": {
+            "symbol": payload.symbol,
+            "signal": payload.signal,
+            "amount": payload.trade_amount,
+            "timestamp": datetime.now().isoformat()
+        }
     }
 
 # ------------------------------------------------------------------

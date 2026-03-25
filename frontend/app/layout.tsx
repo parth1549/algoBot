@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
@@ -26,35 +26,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           `
         }} />
       </head>
-      <body style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      <body className="flex min-h-screen bg-[var(--bg-primary)]">
         <ClerkProvider>
           <Sidebar />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                gap: 12,
-                padding: '8px 24px',
-                borderBottom: '1px solid var(--border)',
-                background: 'var(--bg-secondary)',
-              }}
-            >
-              <Show when="signed-out">
-                <SignInButton mode="redirect" forceRedirectUrl="/market">
-                  <button style={{ padding: '6px 12px' }}>Sign in</button>
-                </SignInButton>
-                <SignUpButton mode="redirect" forceRedirectUrl="/market">
-                  <button style={{ padding: '6px 12px' }}>Sign up</button>
-                </SignUpButton>
-              </Show>
-              <Show when="signed-in">
-                <UserButton />
-              </Show>
-            </div>
+          <div className="flex-1 flex flex-col min-w-0">
             <Topbar />
-            <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
+            <main className="flex-1 p-3 md:p-6 overflow-x-hidden overflow-y-auto w-full">
               {children}
             </main>
           </div>

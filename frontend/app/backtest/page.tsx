@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { api, DataRow } from '@/lib/api';
-import { FlaskConical, AlertCircle, Save, Check } from 'lucide-react';
+import { FlaskConical, AlertCircle, Save, Check, Bot, CheckCircle } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
@@ -64,6 +64,13 @@ export default function BacktestPage() {
   const [result, setResult] = useState<BacktestData | null>(null);
   const [saved, setSaved] = useState(false);
 
+  // AI Agent States
+  const [tradeAmount, setTradeAmount] = useState('10000');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<{ signal: string, suggestion: string, confidence: number } | null>(null);
+  const [tradeExecuted, setTradeExecuted] = useState(false);
+  const [executing, setExecuting] = useState(false);
+
   // Payload computation
   const getBacktestPayload = useCallback(() => ({
     index, instrument, 
@@ -83,6 +90,8 @@ export default function BacktestPage() {
     setLoading(true);
     setError('');
     setResult(null);
+    setAiResult(null);
+    setTradeExecuted(false);
     try {
       const payload = getBacktestPayload();
       
@@ -149,6 +158,59 @@ export default function BacktestPage() {
   const chartData = result?.equity.map((v, i) => ({ index: i, equity: Math.round(v) })) ?? [];
   const buyCount = result?.data.filter(r => r.signal === 1).length ?? 0;
   const sellCount = result?.data.filter(r => r.signal === 0).length ?? 0;
+
+  const handleAiAnalyze = async () => {
+    if (!result) return;
+    setAiLoading(true);
+    setAiResult(null);
+    setTradeExecuted(false);
+    setError('');
+    try {
+      const payload = {
+        symbol: result.symbol,
+        trade_amount: parseFloat(tradeAmount) || 0,
+        total_return: result.totalReturn,
+        final_equity: result.finalEquity,
+        sharpe: sharpe ?? '0',
+        max_drawdown: maxDrawdown ?? '0',
+        buy_signals: buyCount,
+        sell_signals: sellCount
+      };
+      const res = await api.analyzeWithAI(payload);
+      if (res.status === 'success' && res.data) {
+        setAiResult({ ...res.data, signal: res.data.signal.toUpperCase() });
+      } else {
+        setError(res.message || 'AI engine failed to analyze.');
+      }
+    } catch (e: any) {
+      setError(e.message || 'Failed to connect to AI engine.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleExecuteTrade = async () => {
+    if (!aiResult || !result) return;
+    setExecuting(true);
+    setError('');
+    try {
+      const payload = {
+        symbol: result.symbol,
+        signal: aiResult.signal,
+        trade_amount: parseFloat(tradeAmount) || 0
+      };
+      const res = await api.executeTrade(payload);
+      if (res.status === 'success') {
+        setTradeExecuted(true);
+      } else {
+        setError(res.message || 'Trade execution failed.');
+      }
+    } catch (e: any) {
+      setError(e.message || 'Failed to connect for execution.');
+    } finally {
+      setExecuting(false);
+    }
+  };
 
   return (
     <div className="fade-in" style={{ maxWidth: 1100, paddingBottom: 40 }}>
@@ -317,6 +379,80 @@ export default function BacktestPage() {
                 <div className="stat-value" style={{ color, marginTop: 6 }}>{value}</div>
               </div>
             ))}
+          </div>
+
+          {/* AI Trading Agent Panel */}
+          <div className="card" style={{ marginBottom: 24, border: '1px solid rgba(59,130,246,0.3)', background: 'linear-gradient(180deg, rgba(30,41,59,0.7) 0%, rgba(15,23,42,0.9) 100%)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <div style={{ background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', padding: 6, borderRadius: 8 }}>
+                <Bot size={18} color="#fff" />
+              </div>
+              <h2 style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Gemini AI Trading Agent</h2>
+            </div>
+            
+            {!aiResult && !aiLoading && (
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div>
+                  <label className="stat-label" style={{ display: 'block', marginBottom: 6 }}>Fixed Trade Amount (₹)</label>
+                  <input type="number" className="input" style={{ width: 200 }} value={tradeAmount} onChange={e => setTradeAmount(e.target.value)} />
+                </div>
+                <button className="btn-primary" onClick={handleAiAnalyze} style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Bot size={16} /> Analyze Strategy & Get Signal
+                </button>
+              </div>
+            )}
+
+            {aiLoading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', color: 'var(--text-muted)' }}>
+                <div className="spin" style={{ width: 16, height: 16, border: '2px solid var(--border-bright)', borderTopColor: 'var(--accent)', borderRadius: '50%' }} />
+                <span>Gemini is analyzing market metrics and simulating the strategy...</span>
+              </div>
+            )}
+
+            {aiResult && (
+              <div className="fade-in" style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: 16, border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 280 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                      <span className={aiResult.signal === 'BUY' ? 'badge-buy' : aiResult.signal === 'SELL' ? 'badge-sell' : 'badge-hold'} style={{ fontSize: 13, padding: '4px 12px' }}>
+                        {aiResult.signal}
+                      </span>
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
+                        Confidence: {aiResult.confidence}%
+                      </span>
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
+                        Capital: ₹{tradeAmount}
+                      </span>
+                    </div>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+                      {aiResult.suggestion}
+                    </p>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 160 }}>
+                    {tradeExecuted ? (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px', background: 'rgba(16,185,129,0.1)', color: 'var(--accent-green)', borderRadius: 8, border: '1px solid rgba(16,185,129,0.3)', fontWeight: 600, fontSize: 13 }}>
+                        <CheckCircle size={16} /> Executed Successfully
+                      </div>
+                    ) : (
+                      <>
+                        <button className={aiResult.signal === 'SELL' ? 'btn-danger' : 'btn-success'} onClick={handleExecuteTrade} disabled={executing} style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: 8 }}>
+                          {executing ? 'Executing...' : `Execute ${aiResult.signal} Trade`}
+                        </button>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <button onClick={handleAiAnalyze} disabled={executing} style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.5)', color: 'var(--accent)', padding: '8px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                            Re-Analyse
+                          </button>
+                          <button onClick={() => setAiResult(null)} style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', padding: '8px', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
+                            Reset AI
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="card" style={{ marginBottom: 24 }}>

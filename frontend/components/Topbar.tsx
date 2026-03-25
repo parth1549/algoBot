@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Clock, Wifi, WifiOff } from 'lucide-react';
-import ProfileDropdown from './ProfileDropdown';
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
 import BrokerSetup from './BrokerSetup';
+import MobileMenu from './MobileMenu';
 
 export default function Topbar() {
   const [time, setTime] = useState('');
@@ -35,49 +36,55 @@ export default function Topbar() {
   }, []);
 
   return (
-    <header style={{
-      height: 56,
-      background: 'var(--bg-secondary)',
-      borderBottom: '1px solid var(--border)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 24px',
-      flexShrink: 0,
-    }}>
-      <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>
-        Algorithmic Trading Platform · NSE/BSE
+    <header className="h-14 bg-[var(--bg-secondary)] border-b border-[var(--border)] flex items-center justify-between px-4 md:px-6 shrink-0">
+      <div className="flex items-center gap-3">
+        <MobileMenu />
+        <div className="text-[13px] text-[var(--text-muted)] font-medium hidden sm:block">
+          Algorithmic Trading Platform · NSE/BSE
+        </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div className="flex items-center gap-3 md:gap-5">
         {/* Broker Setup */}
         <BrokerSetup />
 
         {/* Backend status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+        <div className="hidden md:flex items-center gap-2 text-xs">
           {backendOnline === null ? (
-            <span style={{ color: 'var(--text-muted)' }}>Checking...</span>
+            <span className="text-[var(--text-muted)]">Checking...</span>
           ) : backendOnline ? (
             <>
-              <Wifi size={14} color="var(--accent-green)" />
-              <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>Backend Online</span>
+              <Wifi size={14} className="text-emerald-500" />
+              <span className="text-emerald-500 font-semibold">Backend Online</span>
             </>
           ) : (
             <>
-              <WifiOff size={14} color="var(--accent-red)" />
-              <span style={{ color: 'var(--accent-red)', fontWeight: 600 }}>Backend Offline</span>
+              <WifiOff size={14} className="text-rose-500" />
+              <span className="text-rose-500 font-semibold">Backend Offline</span>
             </>
           )}
         </div>
 
         {/* Clock */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+        <div className="hidden md:flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] font-mono">
           <Clock size={14} />
           {time}
         </div>
 
-        {/* Profile Dropdown */}
-        <ProfileDropdown />
+        {/* Auth / Profile Dropdown */}
+        <Show when="signed-out">
+          <div className="flex items-center gap-2">
+            <SignInButton mode="redirect" forceRedirectUrl="/market">
+              <button className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 rounded-md text-white cursor-pointer transition-colors">Sign in</button>
+            </SignInButton>
+            <SignUpButton mode="redirect" forceRedirectUrl="/market">
+              <button className="px-3 py-1.5 text-xs font-semibold border border-[var(--border-bright)] hover:bg-[var(--bg-card)] rounded-md text-white cursor-pointer transition-colors">Sign up</button>
+            </SignUpButton>
+          </div>
+        </Show>
+        <Show when="signed-in">
+          <UserButton />
+        </Show>
       </div>
     </header>
   );
