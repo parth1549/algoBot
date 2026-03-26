@@ -778,15 +778,16 @@ class ExecuteTradeRequest(BaseModel):
     signal: str
     trade_amount: float
 
-# Configure Gemini
-api_key = os.getenv('GEMINI_API_KEY')
-if api_key:
-    genai.configure(api_key=api_key)
-
 @app.post("/ai-analyze")
 def ai_analyze(payload: AIAnalyzeRequest):
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
+    
+    api_key = os.getenv('GEMINI_API_KEY')
     if not api_key:
         return {"status": "error", "message": "Gemini API key not configured in .env"}
+    
+    genai.configure(api_key=api_key)
     
     prompt = f"""
     You are an expert quantitative trading AI assistant.
